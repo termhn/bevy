@@ -1,5 +1,5 @@
 use crate::{
-    camera::{ActiveCameras, VisibleEntities},
+    camera::ActiveCameras,
     draw::{Draw, RenderCommand},
     pass::{ClearColor, LoadOp, PassDescriptor, TextureAttachment},
     pipeline::{

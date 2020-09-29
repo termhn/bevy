@@ -15,7 +15,6 @@ use std::ops::Range;
 /// * in a given stage, systems the read archetype X cannot run before systems registered before them that write archetype X
 /// * in a given stage, systems that mutate resource Y cannot run before systems registered before them that read/write resource Y
 /// * in a given stage, systems the read resource Y cannot run before systems registered before them that write resource Y
-
 #[derive(Debug)]
 pub struct ParallelExecutor {
     stages: Vec<ExecutorStage>,

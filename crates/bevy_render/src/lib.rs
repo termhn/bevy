@@ -7,6 +7,7 @@ pub mod mesh;
 pub mod pass;
 pub mod pipeline;
 pub mod render_graph;
+pub mod render_world;
 pub mod renderer;
 pub mod shader;
 pub mod texture;
@@ -23,9 +24,10 @@ pub mod prelude {
         mesh::{shape, Mesh},
         pass::ClearColor,
         pipeline::RenderPipelines,
+        render_world::RenderWorld,
         shader::Shader,
         texture::Texture,
-        visibility::{BoundingSphere, RenderView, RenderViews, Visible},
+        visibility::{BoundingSphere, Dynamic, RenderView, RenderViews, Static, Visible},
     };
 }
 
@@ -35,9 +37,7 @@ use bevy_app::prelude::*;
 use bevy_asset::AddAsset;
 use bevy_ecs::{IntoQuerySystem, IntoThreadLocalSystem};
 use bevy_type_registry::RegisterType;
-use camera::{
-    ActiveCameras, Camera, OrthographicProjection, PerspectiveProjection, VisibleEntities,
-};
+use camera::{ActiveCameras, Camera, OrthographicProjection, PerspectiveProjection};
 use pipeline::{
     DynamicBinding, PipelineCompiler, PipelineDescriptor, PipelineSpecialization,
     PrimitiveTopology, ShaderSpecialization, VertexBufferDescriptors,
@@ -108,14 +108,15 @@ impl Plugin for RenderPlugin {
             .register_component::<OrthographicProjection>()
             .register_component::<PerspectiveProjection>()
             .register_component::<MainPass>()
-            .register_component::<VisibleEntities>()
+            .register_component::<Visible>()
+            .register_component::<Dynamic>()
+            .register_component::<Static>()
             .register_property::<Color>()
             .register_property::<Range<f32>>()
             .register_property::<ShaderSpecialization>()
             .register_property::<DynamicBinding>()
             .register_property::<PrimitiveTopology>()
             .register_properties::<PipelineSpecialization>()
-            .register_component::<Visible>()
             .init_resource::<RenderGraph>()
             .init_resource::<RenderViews>()
             .init_resource::<PipelineCompiler>()
@@ -143,7 +144,7 @@ impl Plugin for RenderPlugin {
             // registration order matters here. this must come after all camera_system::<T> systems
             .add_system_to_stage(
                 bevy_app::stage::POST_UPDATE,
-                camera::visible_entities_system.system(),
+                visibility::visible_entities_system.system(),
             )
             // TODO: turn these "resource systems" into graph nodes and remove the RENDER_RESOURCE stage
             .add_system_to_stage(

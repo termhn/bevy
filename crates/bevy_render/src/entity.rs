@@ -1,5 +1,5 @@
 use crate::{
-    camera::{Camera, OrthographicProjection, PerspectiveProjection, VisibleEntities},
+    camera::{Camera, OrthographicProjection, PerspectiveProjection},
     pipeline::RenderPipelines,
     render_graph::base,
     Draw, Mesh,
@@ -26,7 +26,6 @@ pub struct MeshComponents {
 pub struct Camera3dComponents {
     pub camera: Camera,
     pub perspective_projection: PerspectiveProjection,
-    pub visible_entities: VisibleEntities,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
 }
@@ -39,7 +38,6 @@ impl Default for Camera3dComponents {
                 ..Default::default()
             },
             perspective_projection: Default::default(),
-            visible_entities: Default::default(),
             transform: Default::default(),
             global_transform: Default::default(),
         }
@@ -51,7 +49,6 @@ impl Default for Camera3dComponents {
 pub struct Camera2dComponents {
     pub camera: Camera,
     pub orthographic_projection: OrthographicProjection,
-    pub visible_entities: VisibleEntities,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
 }
@@ -70,7 +67,6 @@ impl Default for Camera2dComponents {
                 far,
                 ..Default::default()
             },
-            visible_entities: Default::default(),
             transform: Transform::from_translation(Vec3::new(0.0, 0.0, far - 0.1)),
             global_transform: Default::default(),
         }
