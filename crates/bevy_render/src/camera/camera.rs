@@ -11,20 +11,6 @@ pub struct Camera {
     pub name: Option<String>,
     #[property(ignore)]
     pub window: WindowId,
-    #[property(ignore)]
-    pub depth_calculation: DepthCalculation,
-}
-
-#[derive(Debug)]
-pub enum DepthCalculation {
-    Distance,
-    ZDifference,
-}
-
-impl Default for DepthCalculation {
-    fn default() -> Self {
-        DepthCalculation::Distance
-    }
 }
 
 #[derive(Default)]
@@ -72,7 +58,6 @@ pub fn camera_system<T: CameraProjection + Component>(
             if changed_window_ids.contains(&window.id) {
                 camera_projection.update(window.width as usize, window.height as usize);
                 camera.projection_matrix = camera_projection.get_projection_matrix();
-                camera.depth_calculation = camera_projection.depth_calculation();
             }
         }
     }

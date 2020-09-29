@@ -10,6 +10,7 @@ pub mod render_graph;
 pub mod renderer;
 pub mod shader;
 pub mod texture;
+pub mod visibility;
 
 pub use once_cell;
 
@@ -24,6 +25,7 @@ pub mod prelude {
         pipeline::RenderPipelines,
         shader::Shader,
         texture::Texture,
+        visibility::{BoundingSphere, RenderView, RenderViews, Visible},
     };
 }
 
@@ -54,6 +56,8 @@ use texture::TextureResourceSystemState;
 
 /// The names of "render" App stages
 pub mod stage {
+    /// Stage where render visibility jobs are kicked off from views
+    pub static RENDER_VISIBILITY: &str = "render_visibility";
     /// Stage where render resources are set up
     pub static RENDER_RESOURCE: &str = "render_resource";
     /// Stage where Render Graph systems are run. In general you shouldn't add systems to this stage manually.
@@ -111,7 +115,9 @@ impl Plugin for RenderPlugin {
             .register_property::<DynamicBinding>()
             .register_property::<PrimitiveTopology>()
             .register_properties::<PipelineSpecialization>()
+            .register_component::<Visible>()
             .init_resource::<RenderGraph>()
+            .init_resource::<RenderViews>()
             .init_resource::<PipelineCompiler>()
             .init_resource::<RenderResourceBindings>()
             .init_resource::<VertexBufferDescriptors>()

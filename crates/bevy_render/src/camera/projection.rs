@@ -1,4 +1,3 @@
-use super::DepthCalculation;
 use bevy_math::Mat4;
 use bevy_property::{Properties, Property};
 use serde::{Deserialize, Serialize};
@@ -6,7 +5,6 @@ use serde::{Deserialize, Serialize};
 pub trait CameraProjection {
     fn get_projection_matrix(&self) -> Mat4;
     fn update(&mut self, width: usize, height: usize);
-    fn depth_calculation(&self) -> DepthCalculation;
 }
 
 #[derive(Debug, Clone, Properties)]
@@ -24,10 +22,6 @@ impl CameraProjection for PerspectiveProjection {
 
     fn update(&mut self, width: usize, height: usize) {
         self.aspect_ratio = width as f32 / height as f32;
-    }
-
-    fn depth_calculation(&self) -> DepthCalculation {
-        DepthCalculation::Distance
     }
 }
 
@@ -89,10 +83,6 @@ impl CameraProjection for OrthographicProjection {
                 self.bottom = 0.0;
             }
         }
-    }
-
-    fn depth_calculation(&self) -> DepthCalculation {
-        DepthCalculation::ZDifference
     }
 }
 
