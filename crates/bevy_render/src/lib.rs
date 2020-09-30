@@ -24,12 +24,12 @@ pub mod prelude {
         mesh::{shape, Mesh},
         pass::ClearColor,
         pipeline::RenderPipelines,
-        render_world::{RenderWorld, RenderWorldEntity},
+        render_world::RenderWorld,
         shader::Shader,
         texture::Texture,
         visibility::{
-            BoundingSphere, Dynamic, RenderView2d, RenderView3d, RenderViews2d, RenderViews3d,
-            Static, Visible2d, Visible3d,
+            BoundingSphere, Dynamic, FrameVisibility, RenderView2d, RenderView3d, RenderViews2d,
+            RenderViews3d, Static, Visible2d, Visible3d,
         },
     };
 }
@@ -113,6 +113,7 @@ impl Plugin for RenderPlugin {
             .register_component::<MainPass>()
             .register_component::<Visible2d>()
             .register_component::<Visible3d>()
+            .register_component::<FrameVisibility>()
             .register_component::<Dynamic>()
             .register_component::<Static>()
             .register_property::<Color>()
@@ -150,7 +151,11 @@ impl Plugin for RenderPlugin {
             // registration order matters here. this must come after all camera_system::<T> systems
             .add_system_to_stage(
                 bevy_app::stage::POST_UPDATE,
-                visibility::visible_entities_system.system(),
+                visibility::visible_entities_system_3d.system(),
+            )
+            .add_system_to_stage(
+                bevy_app::stage::POST_UPDATE,
+                visibility::visible_entities_system_2d.system(),
             )
             // TODO: turn these "resource systems" into graph nodes and remove the RENDER_RESOURCE stage
             .add_system_to_stage(

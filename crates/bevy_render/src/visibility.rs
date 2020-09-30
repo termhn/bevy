@@ -1,10 +1,8 @@
-use bevy_math::Vec3;
-use crate::{RenderWorld, RenderWorldEntity};
 use bevy_core::FloatOrd;
 use bevy_ecs::{Entity, Query, ResMut};
+use bevy_math::Vec3;
 use bevy_property::Properties;
 use bevy_transform::prelude::GlobalTransform;
-
 
 use std::borrow::Cow;
 
@@ -79,15 +77,7 @@ pub struct Visible3d {
     /// Bounding sphere centered at this entity's GlobalTransform.
     pub bounds: BoundingSphere,
     /// Does this entity occlude other entities? i.e. is it opaque
-    #[property(ignore)]
     pub hidden: bool,
-    /// if the entity is visible to any views this frame. this value is updated automatically
-    /// by the visibility system.
-    pub frame_visible: bool,
-    // TODO: opt with smallvec or bitset?
-    /// which views this entity is visible to this frame. this value is updated automatically
-    /// by the visibility system.
-    pub visible_to_views: Vec<usize>,
 }
 
 /// Defines an entity as being visible within the scene, should be considered
@@ -99,15 +89,20 @@ pub struct Visible2d {
     /// Does this entity occlude other entities? i.e. is it opaque
     pub occluder: bool,
     /// If set to true, will automatically be discarded from visibility testing.
-    #[property(ignore)]
     pub hidden: bool,
+}
+
+#[derive(Default, Debug, Properties)]
+pub struct FrameVisibility {
     /// if the entity is visible to any views this frame. this value is updated automatically
     /// by the visibility system.
+    #[property(ignore)]
     pub frame_visible: bool,
+    // TODO: opt with smallvec or bitset?
     /// which views this entity is visible to this frame. this value is updated automatically
     /// by the visibility system.
-    // TODO: opt with smallvec or bitset?
-    pub visible_to_views: Vec<usize>,
+    #[property(ignore)]
+    pub visible_to_views: Vec<ViewVisibility>,
 }
 
 /// Defines an entity as dynamic, i.e. able to move.
@@ -121,10 +116,67 @@ pub struct Dynamic {}
 pub struct Static {}
 
 #[derive(Debug)]
-pub struct ViewVisibleEntity {
-    pub entity: RenderWorldEntity,
-    // distance from associated view center to 
+pub struct ViewVisibility {
+    pub view_index: usize,
     pub order: FloatOrd,
+}
+
+impl ViewVisibility {
+    pub fn new(view_index: usize, order: FloatOrd) -> Self {
+        Self { view_index, order }
+    }
+}
+
+pub fn visible_entities_system_3d(
+    mut render_views: ResMut<RenderViews3d>,
+    mut query: Query<(Entity, &Visible3d, &mut FrameVisibility, &GlobalTransform)>,
+) {
+    // TODO: multi thread this (invert loop and go wide over views? Or could we go wide over entities?)
+    for (entity, visible, mut frame_visibility, transform) in &mut query.iter() {
+        frame_visibility.frame_visible = false;
+        frame_visibility.visible_to_views.clear();
+        for (view_index, view) in render_views.views.iter().enumerate() {
+            let view_center = view.origin;
+
+            if !visible.hidden {
+                let bounds_center = transform.translation();
+
+                let order = FloatOrd((view_center - bounds_center).length());
+
+                // TODO: frustum culling
+                frame_visibility.frame_visible = true;
+                frame_visibility
+                    .visible_to_views
+                    .push(ViewVisibility::new(view_index, order));
+            }
+        }
+    }
+}
+
+pub fn visible_entities_system_2d(
+    mut render_views: ResMut<RenderViews2d>,
+    mut query: Query<(Entity, &Visible2d, &mut FrameVisibility, &GlobalTransform)>,
+) {
+    // TODO: multi thread this (invert loop and go wide over views? Or could we go wide over entities?)
+    for (entity, visible, mut frame_visibility, transform) in &mut query.iter() {
+        frame_visibility.frame_visible = false;
+        frame_visibility.visible_to_views.clear();
+        for (view_index, view) in render_views.views.iter().enumerate() {
+            let view_center = view.origin;
+
+            if !visible.hidden {
+                let bounds_center = transform.translation();
+
+                let order = FloatOrd((view_center - bounds_center).length());
+
+                // TODO: frustum culling
+                frame_visibility.frame_visible = true;
+                frame_visibility
+                    .visible_to_views
+                    .push(ViewVisibility::new(view_index, order));
+            }
+        }
+    }
 }
 
 /*
@@ -173,40 +225,3 @@ pub fn visible_entities_system_old(
     }
 }
 */
-
-pub fn visible_entities_system(
-    mut render_views: ResMut<RenderViews>,
-    mut render_world: ResMut<RenderWorld>,
-    mut query: Query<(Entity, &mut Visible, &GlobalTransform)>,
-) {
-    // TODO: figure out what to do about entities with no transform that still need to be drawn? ask cart which entities these would be
-    // TODO: multi thread this (invert loop and go wide over views? Or could we go wide over entities?)
-    for (entity, mut visible, transform) in &mut query.iter() {
-        for view in render_views.views.iter() {
-            let view_center = view.origin;
-
-            if !visible.hidden {
-                let bounds_center = transform.translation();
-
-                let obj_to_right_plane = 
-                // TODO: frustum culling
-                let order = FloatOrd((view_center - transform.translation()).length());
-            }
-
-            if draw.is_transparent {
-                transparent_entities.push(VisibleEntity { entity, order })
-            } else {
-                visible_entities.value.push(VisibleEntity { entity, order })
-            }
-        }
-
-        // sort opaque entities front-to-back
-        visible_entities.value.sort_by_key(|e| e.order);
-
-        // sort transparent entities back-to-front
-        transparent_entities.sort_by_key(|e| -e.order);
-        visible_entities.value.extend(transparent_entities);
-
-        // TODO: check for big changes in visible entities len() vs capacity() (ex: 2x) and resize to prevent holding unneeded memory
-    }
-}
