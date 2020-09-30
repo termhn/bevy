@@ -24,10 +24,13 @@ pub mod prelude {
         mesh::{shape, Mesh},
         pass::ClearColor,
         pipeline::RenderPipelines,
-        render_world::RenderWorld,
+        render_world::{RenderWorld, RenderWorldEntity},
         shader::Shader,
         texture::Texture,
-        visibility::{BoundingSphere, Dynamic, RenderView, RenderViews, Static, Visible},
+        visibility::{
+            BoundingSphere, Dynamic, RenderView2d, RenderView3d, RenderViews2d, RenderViews3d,
+            Static, Visible2d, Visible3d,
+        },
     };
 }
 
@@ -108,7 +111,8 @@ impl Plugin for RenderPlugin {
             .register_component::<OrthographicProjection>()
             .register_component::<PerspectiveProjection>()
             .register_component::<MainPass>()
-            .register_component::<Visible>()
+            .register_component::<Visible2d>()
+            .register_component::<Visible3d>()
             .register_component::<Dynamic>()
             .register_component::<Static>()
             .register_property::<Color>()
@@ -118,7 +122,9 @@ impl Plugin for RenderPlugin {
             .register_property::<PrimitiveTopology>()
             .register_properties::<PipelineSpecialization>()
             .init_resource::<RenderGraph>()
-            .init_resource::<RenderViews>()
+            .init_resource::<RenderViews2d>()
+            .init_resource::<RenderViews3d>()
+            .init_resource::<RenderWorld>()
             .init_resource::<PipelineCompiler>()
             .init_resource::<RenderResourceBindings>()
             .init_resource::<VertexBufferDescriptors>()

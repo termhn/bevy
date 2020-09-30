@@ -1,5 +1,5 @@
 use bevy_math::Vec3;
-use crate::RenderWorld;
+use crate::{RenderWorld, RenderWorldEntity};
 use bevy_core::FloatOrd;
 use bevy_ecs::{Entity, Query, ResMut};
 use bevy_property::Properties;
@@ -8,21 +8,18 @@ use bevy_transform::prelude::GlobalTransform;
 
 use std::borrow::Cow;
 
-// A plane as defined by the equation
-// `ax + by + cz + d = 0`
+/// A plane as defined by a normal vector and point on the plane
 #[derive(Clone, Copy, Debug)]
 pub struct Plane {
-    pub a: f32,
-    pub b: f32,
-    pub c: f32,
-    pub d: f32,
+    pub norm: Vec3,
+    pub point: Vec3,
 }
 
 /// A view that needs to be rendered. Defines the needed
 /// information to compute visibility information for entities
 /// (frustum and visibility culling).
 #[derive(Clone, Debug)]
-pub struct RenderView {
+pub struct RenderView3d {
     pub spawning_feature: Cow<'static, str>,
     pub origin: Vec3,
     pub near_plane: Plane,
@@ -33,24 +30,72 @@ pub struct RenderView {
     pub top_plane: Plane,
 }
 
-/// All render views to be rendered this frame. Visiblity jobs
+/// A view that needs to be rendered. Defines the needed
+/// information to compute visibility information for entities
+/// (frustum culling).
+#[derive(Clone, Debug)]
+pub struct RenderView2d {
+    pub spawning_feature: Cow<'static, str>,
+    pub origin: Vec3,
+    pub right_edge: f32,
+    pub left_edge: f32,
+    pub bottom_edge: f32,
+    pub top_edge: f32,
+}
+
+/// All 3d render views to be rendered this frame. Visiblity jobs
 /// will be spawned based on the views added to this resource
 /// each frame.
 #[derive(Default)]
-pub struct RenderViews {
-    pub views: Vec<RenderView>,
+pub struct RenderViews3d {
+    pub views: Vec<RenderView3d>,
 }
 
+/// All 2d render views to be rendered this frame. Visiblity jobs
+/// will be spawned based on the views added to this resource
+/// each frame.
+#[derive(Default)]
+pub struct RenderViews2d {
+    pub views: Vec<RenderView2d>,
+}
+
+/// Bounding sphere centered on the entity's transform
 #[derive(Default, Debug, Properties)]
 pub struct BoundingSphere {
     pub radius: f32,
 }
+
+/// Bounding rect centered on the entity's transform
+#[derive(Default, Debug, Properties)]
+pub struct BoundingRect {
+    pub width: f32,
+    pub height: f32,
+}
+
 /// Defines an entity as being visible within the scene, should be considered
 /// in visibility checks and for rendering by rendering systems.
 #[derive(Default, Debug, Properties)]
-pub struct Visible {
+pub struct Visible3d {
     /// Bounding sphere centered at this entity's GlobalTransform.
     pub bounds: BoundingSphere,
+    /// Does this entity occlude other entities? i.e. is it opaque
+    #[property(ignore)]
+    pub hidden: bool,
+    /// if the entity is visible to any views this frame. this value is updated automatically
+    /// by the visibility system.
+    pub frame_visible: bool,
+    // TODO: opt with smallvec or bitset?
+    /// which views this entity is visible to this frame. this value is updated automatically
+    /// by the visibility system.
+    pub visible_to_views: Vec<usize>,
+}
+
+/// Defines an entity as being visible within the scene, should be considered
+/// in visibility checks and for rendering by rendering systems.
+#[derive(Default, Debug, Properties)]
+pub struct Visible2d {
+    /// Bounding sphere centered at this entity's GlobalTransform.
+    pub bounds: BoundingRect,
     /// Does this entity occlude other entities? i.e. is it opaque
     pub occluder: bool,
     /// If set to true, will automatically be discarded from visibility testing.
@@ -140,21 +185,13 @@ pub fn visible_entities_system(
         for view in render_views.views.iter() {
             let view_center = view.origin;
 
-        for (entity, draw) in &mut draw_query.iter() {
-            if !draw.is_visible {
-                continue;
-            }
+            if !visible.hidden {
+                let bounds_center = transform.translation();
 
-            let order =
-                if let Ok(global_transform) = draw_transform_query.get::<GlobalTransform>(entity) {
-                    let position = global_transform.translation();
-                    // smaller distances are sorted to lower indices by using the distance from the camera
-                    FloatOrd((camera_position - position).length())
-                } else {
-                    let order = FloatOrd(no_transform_order);
-                    no_transform_order += 0.1;
-                    order
-                };
+                let obj_to_right_plane = 
+                // TODO: frustum culling
+                let order = FloatOrd((view_center - transform.translation()).length());
+            }
 
             if draw.is_transparent {
                 transparent_entities.push(VisibleEntity { entity, order })
