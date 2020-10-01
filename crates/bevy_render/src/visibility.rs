@@ -1,3 +1,4 @@
+use crate::render_world::{RenderWorld, ViewNode};
 use bevy_core::FloatOrd;
 use bevy_ecs::{Entity, Query, ResMut};
 use bevy_math::Vec3;
@@ -17,7 +18,7 @@ pub struct Plane {
 /// information to compute visibility information for entities
 /// (frustum and visibility culling).
 #[derive(Clone, Debug)]
-pub struct RenderView3d {
+pub struct RenderView {
     pub spawning_feature: Cow<'static, str>,
     pub origin: Vec3,
     pub near_plane: Plane,
@@ -28,67 +29,35 @@ pub struct RenderView3d {
     pub top_plane: Plane,
 }
 
-/// A view that needs to be rendered. Defines the needed
-/// information to compute visibility information for entities
-/// (frustum culling).
-#[derive(Clone, Debug)]
-pub struct RenderView2d {
+pub struct ComputedRenderView {
     pub spawning_feature: Cow<'static, str>,
-    pub origin: Vec3,
-    pub right_edge: f32,
-    pub left_edge: f32,
-    pub bottom_edge: f32,
-    pub top_edge: f32,
+    pub view_nodes: Vec<ViewNode>,
 }
 
-/// All 3d render views to be rendered this frame. Visiblity jobs
+/// All render views to be rendered this frame. Visiblity jobs
 /// will be spawned based on the views added to this resource
-/// each frame.
+/// each frame
 #[derive(Default)]
-pub struct RenderViews3d {
-    pub views: Vec<RenderView3d>,
+pub struct RenderViews {
+    pub views: Vec<RenderView>,
 }
 
-/// All 2d render views to be rendered this frame. Visiblity jobs
-/// will be spawned based on the views added to this resource
-/// each frame.
-#[derive(Default)]
-pub struct RenderViews2d {
-    pub views: Vec<RenderView2d>,
-}
-
-/// Bounding sphere centered on the entity's transform
-#[derive(Default, Debug, Properties)]
-pub struct BoundingSphere {
-    pub radius: f32,
-}
-
-/// Bounding rect centered on the entity's transform
-#[derive(Default, Debug, Properties)]
-pub struct BoundingRect {
-    pub width: f32,
-    pub height: f32,
+/// Bounding shape centered on the entity's transform
+#[derive(Debug)]
+pub enum Bounds {
+    Sphere { radius: f32 },
+    Rect { width: f32, height: f32 },
 }
 
 /// Defines an entity as being visible within the scene, should be considered
 /// in visibility checks and for rendering by rendering systems.
 #[derive(Default, Debug, Properties)]
-pub struct Visible3d {
+pub struct Visible {
     /// Bounding sphere centered at this entity's GlobalTransform.
-    pub bounds: BoundingSphere,
-    /// Does this entity occlude other entities? i.e. is it opaque
-    pub hidden: bool,
-}
-
-/// Defines an entity as being visible within the scene, should be considered
-/// in visibility checks and for rendering by rendering systems.
-#[derive(Default, Debug, Properties)]
-pub struct Visible2d {
-    /// Bounding sphere centered at this entity's GlobalTransform.
-    pub bounds: BoundingRect,
+    pub bounds: Bounds,
     /// Does this entity occlude other entities? i.e. is it opaque
     pub occluder: bool,
-    /// If set to true, will automatically be discarded from visibility testing.
+    /// Does this entity occlude other entities? i.e. is it opaque
     pub hidden: bool,
 }
 
@@ -127,35 +96,9 @@ impl ViewVisibility {
     }
 }
 
-pub fn visible_entities_system_3d(
-    mut render_views: ResMut<RenderViews3d>,
-    mut query: Query<(Entity, &Visible3d, &mut FrameVisibility, &GlobalTransform)>,
-) {
-    // TODO: multi thread this (invert loop and go wide over views? Or could we go wide over entities?)
-    for (entity, visible, mut frame_visibility, transform) in &mut query.iter() {
-        frame_visibility.frame_visible = false;
-        frame_visibility.visible_to_views.clear();
-        for (view_index, view) in render_views.views.iter().enumerate() {
-            let view_center = view.origin;
-
-            if !visible.hidden {
-                let bounds_center = transform.translation();
-
-                let order = FloatOrd((view_center - bounds_center).length());
-
-                // TODO: frustum culling
-                frame_visibility.frame_visible = true;
-                frame_visibility
-                    .visible_to_views
-                    .push(ViewVisibility::new(view_index, order));
-            }
-        }
-    }
-}
-
-pub fn visible_entities_system_2d(
-    mut render_views: ResMut<RenderViews2d>,
-    mut query: Query<(Entity, &Visible2d, &mut FrameVisibility, &GlobalTransform)>,
+pub fn visible_entities_system(
+    mut render_views: ResMut<RenderViews>,
+    mut query: Query<(Entity, &Visible, &mut FrameVisibility, &GlobalTransform)>,
 ) {
     // TODO: multi thread this (invert loop and go wide over views? Or could we go wide over entities?)
     for (entity, visible, mut frame_visibility, transform) in &mut query.iter() {

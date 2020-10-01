@@ -27,10 +27,7 @@ pub mod prelude {
         render_world::RenderWorld,
         shader::Shader,
         texture::Texture,
-        visibility::{
-            BoundingSphere, Dynamic, FrameVisibility, RenderView2d, RenderView3d, RenderViews2d,
-            RenderViews3d, Static, Visible2d, Visible3d,
-        },
+        visibility::{Bounds, Dynamic, FrameVisibility, RenderView, RenderViews, Static, Visible},
     };
 }
 
@@ -111,8 +108,7 @@ impl Plugin for RenderPlugin {
             .register_component::<OrthographicProjection>()
             .register_component::<PerspectiveProjection>()
             .register_component::<MainPass>()
-            .register_component::<Visible2d>()
-            .register_component::<Visible3d>()
+            .register_component::<Visible>()
             .register_component::<FrameVisibility>()
             .register_component::<Dynamic>()
             .register_component::<Static>()
@@ -123,8 +119,7 @@ impl Plugin for RenderPlugin {
             .register_property::<PrimitiveTopology>()
             .register_properties::<PipelineSpecialization>()
             .init_resource::<RenderGraph>()
-            .init_resource::<RenderViews2d>()
-            .init_resource::<RenderViews3d>()
+            .init_resource::<RenderViews>()
             .init_resource::<RenderWorld>()
             .init_resource::<PipelineCompiler>()
             .init_resource::<RenderResourceBindings>()
@@ -151,11 +146,7 @@ impl Plugin for RenderPlugin {
             // registration order matters here. this must come after all camera_system::<T> systems
             .add_system_to_stage(
                 bevy_app::stage::POST_UPDATE,
-                visibility::visible_entities_system_3d.system(),
-            )
-            .add_system_to_stage(
-                bevy_app::stage::POST_UPDATE,
-                visibility::visible_entities_system_2d.system(),
+                visibility::visible_entities_system.system(),
             )
             // TODO: turn these "resource systems" into graph nodes and remove the RENDER_RESOURCE stage
             .add_system_to_stage(

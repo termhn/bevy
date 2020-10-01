@@ -1,71 +1,57 @@
-use bevy_ecs::{Entity, EntityBuilder, ParallelExecutor, Resources, Schedule, World};
+use crate::visibility::{ComputedRenderView, RenderView};
+use bevy_core::FloatOrd;
+use bevy_ecs::{prelude::*, Entity, EntityBuilder, ParallelExecutor, Resources, Schedule, World};
+use bevy_property::Properties;
 
 use core::any::TypeId;
 use std::collections::{hash_map::Entry, HashMap};
 
 use downcast_rs::Downcast;
-use generational_arena::{Arena, Index};
+pub use froggy::{Pointer as RenderDataPointer, Storage as RenderFeatureStorage};
 
-pub struct RenderEntityBuilder {
-    builder: EntityBuilder,
+/// Types that can be used as data in the RenderWorld. Automatically implemented
+/// for all types that are `Send + Sync + 'static`.
+pub trait RenderData: Send + Sync + 'static {}
+impl<T: Send + Sync + 'static> RenderData for T {}
+
+// /// A type-erased version of a `RenderDataPointer` which maybe downcasted into
+// /// a typed version.
+// pub trait DynRenderDataPointer: Downcast {}
+// downcast_rs::impl_downcast!(DynRenderDataPointer);
+// impl<T: RenderData> DynRenderDataPointer for RenderDataPointer<T> {}
+
+/// A thin representation of a visible entity in a single view which
+/// points back to the RenderWorld Entity with pointers to its associated data
+/// and contains ordering information relative to that view.
+pub struct ViewNode {
+    pub render_entity: Entity,
+    pub order: FloatOrd,
 }
 
 #[derive(Default)]
 pub struct RenderWorld {
-    world: World,
+    pub world: World,
+    pub resources: Resources,
 }
 
-// pub trait RenderData: Send + Sync + 'static {}
-// impl<T: Send + Sync + 'static> RenderData for T {}
+impl RenderWorld {
+    pub fn new() -> Self {
+        let mut rw = Self {
+            world: World::new(),
+            resources: Resources::default(),
+        };
 
-// pub struct Storage<T> {
-//     arena: Arena<T>,
-// }
+        rw.resources.insert(Vec::<RenderView>::new());
+        rw.resources.insert(Vec::<ComputedRenderView>::new());
 
-// impl<T> Storage<T> {
-//     pub fn new() -> Self {
-//         Self {
-//             arena: Arena::new(),
-//         }
-//     }
+        rw
+    }
 
-//     pub fn get(&self, entity: Index) -> Option<&T> {
-//         self.arena.get(entity.0)
-//     }
-// }
-// pub trait RenderDataStorage: RenderData + Downcast {}
-// downcast_rs::impl_downcast!(RenderDataStorage);
-// impl<T: RenderData + 'static> RenderDataStorage for Storage<T> {}
+    // pub fn get_storage<T: RenderData>(&self) -> Option<Ref<'_, RenderFeatureStorage<T>>> {
+    //     self.resources.get()
+    // }
 
-// pub enum RenderWorldError {
-//     StorageDoesNotExist,
-// }
-
-// pub struct RenderWorld {
-//     dynamic_render_data: HashMap<TypeId, Box<dyn RenderDataStorage>>,
-// }
-
-// impl RenderWorld {
-//     pub fn register<T: RenderData>(&mut self) {
-//         self.dynamic_render_data
-//             .insert(TypeId::of::<T>(), Box::new(Storage::<T>::new()));
-//     }
-
-//     pub fn get_storage<T: RenderData>(&self) -> Result<&Storage<T>, RenderWorldError> {
-//         Ok(self
-//             .dynamic_render_data
-//             .get(&TypeId::of::<T>())
-//             .ok_or(RenderWorldError::StorageDoesNotExist)?
-//             .downcast_ref()
-//             .unwrap())
-//     }
-
-//     pub fn get_storage_mut<T: RenderData>(&self) -> Result<&mut Storage<T>, RenderWorldError> {
-//         Ok(self
-//             .dynamic_render_data
-//             .get(&TypeId::of::<T>())
-//             .ok_or(RenderWorldError::StorageDoesNotExist)?
-//             .downcast_ref()
-//             .unwrap())
-//     }
-// }
+    // pub fn get_storage_mut<T: RenderData>(&self) -> Option<RefMut<'_, RenderFeatureStorage<T>>> {
+    //     self.resources.get_mut()
+    // }
+}

@@ -2,23 +2,40 @@ use crate::{
     camera::{Camera, OrthographicProjection, PerspectiveProjection},
     pipeline::RenderPipelines,
     render_graph::base,
-    Draw, Mesh,
+    Draw, FrameVisibility, Mesh, Visible,
 };
 use base::MainPass;
 use bevy_asset::Handle;
-use bevy_ecs::Bundle;
+use bevy_ecs::{Bundle, Entity, EntityBuilder};
 use bevy_math::Vec3;
+use bevy_property::Properties;
 use bevy_transform::components::{GlobalTransform, Transform};
+
+/// A builder which can be used to extract data from the simulation World
+/// into the RenderWorld.
+#[derive(Default, Properties)]
+pub struct RenderEntityBuilder {
+    #[property(ignore)]
+    pub builder: EntityBuilder,
+}
+
+/// If it exists, the corresponding Entity in the RenderWorld
+#[derive(Default, Properties)]
+pub struct RenderWorldEntity {
+    #[property(ignore)]
+    pub render_entity: Option<Entity>,
+}
 
 /// A component bundle for "mesh" entities
 #[derive(Bundle, Default)]
 pub struct MeshComponents {
     pub mesh: Handle<Mesh>,
-    pub draw: Draw,
-    pub render_pipelines: RenderPipelines,
-    pub main_pass: MainPass,
     pub transform: Transform,
     pub global_transform: GlobalTransform,
+    pub visible: Visible,
+    pub visibility: FrameVisibility,
+    pub render_entity_builder: RenderEntityBuilder,
+    pub render_world_entity: RenderWorldEntity,
 }
 
 /// A component bundle for "3d camera" entities
